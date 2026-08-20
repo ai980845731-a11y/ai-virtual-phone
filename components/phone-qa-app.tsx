@@ -795,8 +795,9 @@ export function PhoneQaApp({ onClose, onNotice }: PhoneQaAppProps) {
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const stickToBottomRef = useRef(true);
   const lastMouseYRef = useRef(-1);
+  const composerWrapRef = useRef<HTMLElement | null>(null);
 
-  // ── 选中文字拖到输入栏附近时自动滚动 ──
+  // ── 选中文字拖到输入栏上方时自动滚动 ──
   // 浏览器原生自动滚动要等光标到达滚动容器底边才触发，
   // 但输入栏浮在上面盖住了底边，导致用户要拖到输入栏下方才开始滚。
   // 这里主动检测光标位置，提前开始滚动。
@@ -810,10 +811,11 @@ export function PhoneQaApp({ onClose, onNotice }: PhoneQaAppProps) {
       const sel = window.getSelection();
       if (!sel || sel.isCollapsed) { dragging = false; return; }
       if (lastMouseYRef.current < 0) { raf = requestAnimationFrame(tick); return; }
-      const rect = body.getBoundingClientRect();
-      const THRESHOLD = 120; // 光标距容器底边多远开始滚
-      const bottomEdge = rect.bottom;
-      const dist = bottomEdge - lastMouseYRef.current;
+      // 用输入栏顶部作为参考线——光标一靠近输入栏上方就开始滚
+      const composerTop = composerWrapRef.current?.getBoundingClientRect().top;
+      const triggerY = composerTop ?? (body.getBoundingClientRect().bottom - 160);
+      const THRESHOLD = 100; // 光标距输入栏顶部多远开始滚
+      const dist = triggerY - lastMouseYRef.current;
       if (dist < THRESHOLD) {
         const ratio = 1 - Math.max(0, dist) / THRESHOLD;
         body.scrollTop += ratio * 14; // 最大速度 ~14px/frame
@@ -1038,35 +1040,34 @@ export function PhoneQaApp({ onClose, onNotice }: PhoneQaAppProps) {
     if (!body || captureLoading) return;
     setCaptureLoading(true);
     try {
-      const html2canvas = (await import("html2canvas")).default;
+      // html2canvas 无 @types 声明，运行时动态引入；skipLibCheck=true 不影响编译
+      const mod = await import("html2canvas") as { default: (el: HTMLElement, opts?: Record<string, unknown>) => Promise<HTMLCanvasElement> };
+      const html2canvas = mod.default;
       const savedTop = body.scrollTop;
       const totalH = body.scrollHeight;
       const viewH = body.clientHeight;
       const segments: HTMLCanvasElement[] = [];
+
+      // 临时禁用 content-visibility: auto，防止未渲染区域截图空白
+      const msgEls = body.querySelectorAll<HTMLElement>(".qa-msg-wrap");
+      msgEls.forEach((el) => { el.style.contentVisibility = "visible"; });
+      // 重排后等浏览器完成渲染
+      void body.offsetHeight;
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
 
       // 第一段：当前视口（包含 header 模糊等视觉效果）
       body.scrollTop = savedTop;
       await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
       segments.push(await html2canvas(body, { useCORS: true, scale: window.devicePixelRatio }));
 
-      // 后续段：向下滚动
+      // 后续段：向下滚动，每滚一屏截一张
+      // 循环条件 pos <= maxScroll 保证每段都是完整一屏，无需裁剪
       const maxScroll = totalH - viewH;
       let pos = savedTop + viewH;
       while (pos <= maxScroll) {
         body.scrollTop = pos;
         await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
-        const seg = await html2canvas(body, { useCORS: true, scale: window.devicePixelRatio });
-        // 最后一段可能不满一屏，裁掉底部空白
-        if (pos + viewH > totalH) {
-          const cropPx = Math.round((totalH - pos) * window.devicePixelRatio);
-          const cropCanvas = document.createElement("canvas");
-          cropCanvas.width = seg.width;
-          cropCanvas.height = cropPx;
-          cropCanvas.getContext("2d")!.drawImage(seg, 0, 0, seg.width, cropPx, 0, 0, seg.width, cropPx);
-          segments.push(cropCanvas);
-        } else {
-          segments.push(seg);
-        }
+        segments.push(await html2canvas(body, { useCORS: true, scale: window.devicePixelRatio }));
         pos += viewH;
       }
 
@@ -1092,7 +1093,11 @@ export function PhoneQaApp({ onClose, onNotice }: PhoneQaAppProps) {
 
       // 恢复滚动位置
       body.scrollTop = savedTop;
+      // 恢复 content-visibility
+      msgEls.forEach((el) => { el.style.contentVisibility = ""; });
     } catch (err) {
+      // 恢复 content-visibility（即使出错也要恢复）
+      body.querySelectorAll<HTMLElement>(".qa-msg-wrap").forEach((el) => { el.style.contentVisibility = ""; });
       onNotice?.(`截图失败：${err instanceof Error ? err.message : "未知错误"}`);
     } finally {
       setCaptureLoading(false);
@@ -1208,7 +1213,7 @@ export function PhoneQaApp({ onClose, onNotice }: PhoneQaAppProps) {
         )}
       </div>
 
-      <footer className="qa-composer-wrap">
+      <footer className="qa-composer-wrap" ref={composerWrapRef}>
         <div className={`qa-composer ${snapshot.isGenerating ? "is-generating" : ""}`}>
           {pendingImages.length > 0 && (
             <div className="qa-attach-strip">
