@@ -1145,6 +1145,21 @@ export function MascotChatRoom({ onBack, onDeleted }: MascotChatRoomProps) {
                             void handleSend();
                         }
                     }}
+                    onPaste={(event) => {
+                        const items = event.clipboardData?.items;
+                        if (!items) return;
+                        const imageFiles: File[] = [];
+                        for (let i = 0; i < items.length; i++) {
+                            if (items[i].type.startsWith("image/")) {
+                                const file = items[i].getAsFile();
+                                if (file) imageFiles.push(file);
+                            }
+                        }
+                        if (imageFiles.length > 0) {
+                            event.preventDefault();
+                            void handlePickImages(imageFiles);
+                        }
+                    }}
                     enterKeyHint={enterToSendEnabled ? "send" : "enter"}
                     className="chat-input-textarea"
                     placeholder={`跟${settings.nickname || "AI助手"}聊聊...`}
