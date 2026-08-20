@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from "react";
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type ClipboardEvent as ReactClipboardEvent, type ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
@@ -762,7 +762,16 @@ export function PhoneQaApp({ onClose, onNotice }: PhoneQaAppProps) {
   }, []);
 
   useEffect(() => {
-    void hydrateQaChat();
+    void hydrateQaChat().then(() => {
+      // 消息加载完成后，等 DOM 布局完毕再滚到底部
+      stickToBottomRef.current = true;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const el = bodyRef.current;
+          if (el) el.scrollTop = el.scrollHeight;
+        });
+      });
+    });
     refreshComposerMeta();
   }, [refreshComposerMeta]);
 
@@ -835,6 +844,15 @@ export function PhoneQaApp({ onClose, onNotice }: PhoneQaAppProps) {
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
   }, []);
 
+  // 发送后强制滚到底：刚发的用户气泡 + 助手空泡都要进视口，
+  // 否则首屏加载+直接发送时容易看到"消息在屏幕上方，自己在底部"的违和状态
+  useLayoutEffect(() => {
+    if (stickToBottomRef.current) {
+      const el = bodyRef.current;
+      if (el) el.scrollTop = el.scrollHeight;
+    }
+  }, [messages.length, snapshot.activeSessionId]);
+
   const handleSend = useCallback(() => {
     const text = input.trim();
     if ((!text && pendingImages.length === 0) || snapshot.isGenerating) return;
@@ -847,6 +865,7 @@ export function PhoneQaApp({ onClose, onNotice }: PhoneQaAppProps) {
   }, [input, pendingImages, snapshot.isGenerating, autoGrow]);
 
   // 附加图片：仅识图已开启的 API 显示入口；读为 dataURL，单张限 4MB
+  // 复用：文件选择与剪贴板粘贴都走这里，避免两套限流/限张逻辑
   const handlePickImages = useCallback((files: FileList | null) => {
     if (!files?.length) return;
     for (const file of Array.from(files).slice(0, 6)) {
@@ -863,6 +882,26 @@ export function PhoneQaApp({ onClose, onNotice }: PhoneQaAppProps) {
     }
     if (imageInputRef.current) imageInputRef.current.value = "";
   }, [onNotice]);
+
+  // 粘贴图片：clipboardData 拿图片文件直接走 handlePickImages；只贴文本时不做拦截
+  // 入口仅在 API 启用了识图时出现，与「+」号按钮同条件
+  const handleComposerPaste = useCallback((e: ReactClipboardEvent<HTMLTextAreaElement>) => {
+    if (!visionEnabled) return;
+    const items = e.clipboardData?.items;
+    if (!items || items.length === 0) return;
+    const imageFiles: File[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.kind !== "file") continue;
+      const file = item.getAsFile();
+      if (file && file.type.startsWith("image/")) imageFiles.push(file);
+    }
+    if (imageFiles.length === 0) return;
+    e.preventDefault();
+    const dt = new DataTransfer();
+    for (const f of imageFiles) dt.items.add(f);
+    handlePickImages(dt.files);
+  }, [visionEnabled, handlePickImages]);
 
   const handleRetry = useCallback((assistantMsgId: string) => {
     stickToBottomRef.current = true;
@@ -1015,6 +1054,7 @@ export function PhoneQaApp({ onClose, onNotice }: PhoneQaAppProps) {
               setInput(e.target.value);
               autoGrow();
             }}
+            onPaste={handleComposerPaste}
             onKeyDown={(e) => {
               if (shouldSendChatInputOnEnter(e, enterToSendEnabled)) {
                 e.preventDefault();

@@ -1,6 +1,6 @@
 "use client";
 
-import { forwardRef, Fragment, memo, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { forwardRef, Fragment, memo, useCallback, useEffect, useImperativeHandle, useLayoutEffect, useMemo, useRef, useState, type ClipboardEvent as ReactClipboardEvent } from "react";
 import { ChatSession, ChatMessage, CHAT_APP_SETTINGS_UPDATED_EVENT, CHAT_INITIAL_VISIBLE_MESSAGE_COUNT, CHAT_LOAD_MORE_MESSAGE_COUNT, CHAT_REQUEST_REPLY_EVENT, loadChatAppSettings, loadChatMessages, loadChatContacts, loadChatSessions, saveChatSessions, pushChatMessage, updateChatMessage, deleteChatMessage, deleteChatMessagesFrom, deleteChatMessagesByIds, retractChatMessage, editChatMessage, updateMessageMediaData, replaceResponseBatchWithParts, replaceGroupResponseRound, isReadingDiscussMessage, isSystemInstructionMessage, createResponseBatchId, createResponseRoundId, getLatestStateValues, getLatestCharacterStateValues, compareChatMessages } from "@/lib/chat-storage";
 import type { StateValue } from "@/lib/chat-storage";
 import { parseStateValues, mergeStateValues } from "@/lib/state-value-parser";
@@ -624,6 +624,7 @@ const ChatTextInputBar = memo(forwardRef<ChatTextInputHandle, {
     onStopGeneration: () => void;
     onTriggerAIResponse: () => void;
 	onSendSticker: (name: string, url?: string) => void;
+    onSendImage: (dataUrl: string) => void;
 }>(function ChatTextInputBar({
     characterName,
     characterId,
@@ -655,6 +656,7 @@ const ChatTextInputBar = memo(forwardRef<ChatTextInputHandle, {
     onStopGeneration,
     onTriggerAIResponse,
     onSendSticker,
+    onSendImage,
 }, ref) {
     const [inputText, setInputText] = useState("");
     const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -790,6 +792,31 @@ const ChatTextInputBar = memo(forwardRef<ChatTextInputHandle, {
                     setSuggestClosed(false);
                 }}
                 onBlur={() => setSuggestClosed(true)}
+                // 粘贴图片：剪贴板含图片时直接读为 dataURL 发送（照片墙同款 image 消息），
+                // 纯文本粘贴不拦截。限 6 张、单张 4MB，与照片墙一致。
+                onPaste={(e: ReactClipboardEvent<HTMLTextAreaElement>) => {
+                    if (inputLocked) return;
+                    const items = e.clipboardData?.items;
+                    if (!items || items.length === 0) return;
+                    const files: File[] = [];
+                    for (let i = 0; i < items.length; i++) {
+                        const it = items[i];
+                        if (it.kind !== "file") continue;
+                        const f = it.getAsFile();
+                        if (f && f.type.startsWith("image/")) files.push(f);
+                    }
+                    if (files.length === 0) return;
+                    e.preventDefault();
+                    for (const file of files.slice(0, 6)) {
+                        if (file.size > 4 * 1024 * 1024) continue;
+                        const reader = new FileReader();
+                        reader.onload = () => {
+                            const url = typeof reader.result === "string" ? reader.result : "";
+                            if (url) onSendImage(url);
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                }}
                 onKeyDown={e => {
                     if (e.key === "Escape") {
                         setSuggestClosed(true);
@@ -5910,6 +5937,7 @@ export function ChatRoom({ session, onBack }: ChatRoomProps) {
                 onStopGeneration={clearStuckGeneration}
                 onTriggerAIResponse={triggerAIResponse}
                 onSendSticker={(name, url) => { setShowStickerPanel(false); sendRichMessage("sticker", { label: name, stickerUrl: url }); }}
+                onSendImage={(dataUrl) => { setShowPlusMenu(false); sendRichMessage("image", { label: "" }, "", dataUrl); }}
             />
             ))}
 
