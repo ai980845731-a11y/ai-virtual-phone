@@ -4,7 +4,7 @@ import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useStat
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkBreaks from "remark-breaks";
-import { AppWindow, ArrowUp, BrushCleaning, Check, ChevronLeft, ChevronRight, Copy, Drama, Gamepad2, Github, Loader2, Menu, Pencil, Play, Plus, Square, Trash2, Wrench, X } from "lucide-react";
+import { AppWindow, ArrowUp, BrushCleaning, Camera, Check, ChevronLeft, ChevronRight, Copy, Drama, Gamepad2, Github, Loader2, Menu, Pencil, Play, Plus, Square, Trash2, Wrench, X } from "lucide-react";
 import { QaFileCard } from "@/components/qa-file-card";
 import { parseQaFileMarker } from "@/lib/qa-computer-tools";
 import { mdiHammerWrench } from "@mdi/js";
@@ -788,6 +788,7 @@ export function PhoneQaApp({ onClose, onNotice }: PhoneQaAppProps) {
   const [modelName, setModelName] = useState("");
   const [repoWritable, setRepoWritable] = useState(false);
   const [writeMode, setWriteMode] = useState<"confirm" | "auto">("confirm");
+  const [captureLoading, setCaptureLoading] = useState(false);
   // Enter 发送：跟随聊天 App 的同一开关，设置变动实时同步
   const [enterToSendEnabled, setEnterToSendEnabled] = useState(() => loadChatAppSettings().enterToSendEnabled === true);
   const bodyRef = useRef<HTMLDivElement | null>(null);
@@ -1031,6 +1032,73 @@ export function PhoneQaApp({ onClose, onNotice }: PhoneQaAppProps) {
     }
   }, [editingMsg, editText, snapshot.activeSessionId, onNotice]);
 
+  // ── 长截图：自动滚动拼接整个聊天区域 ──
+  const handleCapture = useCallback(async () => {
+    const body = bodyRef.current;
+    if (!body || captureLoading) return;
+    setCaptureLoading(true);
+    try {
+      const html2canvas = (await import("html2canvas")).default;
+      const savedTop = body.scrollTop;
+      const totalH = body.scrollHeight;
+      const viewH = body.clientHeight;
+      const segments: HTMLCanvasElement[] = [];
+
+      // 第一段：当前视口（包含 header 模糊等视觉效果）
+      body.scrollTop = savedTop;
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      segments.push(await html2canvas(body, { useCORS: true, scale: window.devicePixelRatio }));
+
+      // 后续段：向下滚动
+      const maxScroll = totalH - viewH;
+      let pos = savedTop + viewH;
+      while (pos <= maxScroll) {
+        body.scrollTop = pos;
+        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+        const seg = await html2canvas(body, { useCORS: true, scale: window.devicePixelRatio });
+        // 最后一段可能不满一屏，裁掉底部空白
+        if (pos + viewH > totalH) {
+          const cropPx = Math.round((totalH - pos) * window.devicePixelRatio);
+          const cropCanvas = document.createElement("canvas");
+          cropCanvas.width = seg.width;
+          cropCanvas.height = cropPx;
+          cropCanvas.getContext("2d")!.drawImage(seg, 0, 0, seg.width, cropPx, 0, 0, seg.width, cropPx);
+          segments.push(cropCanvas);
+        } else {
+          segments.push(seg);
+        }
+        pos += viewH;
+      }
+
+      // 拼接
+      const finalW = segments[0].width;
+      const finalH = segments.reduce((s, c) => s + c.height, 0);
+      const final = document.createElement("canvas");
+      final.width = finalW;
+      final.height = finalH;
+      const fctx = final.getContext("2d")!;
+      let y = 0;
+      for (const seg of segments) {
+        fctx.drawImage(seg, 0, y);
+        y += seg.height;
+      }
+
+      // 下载
+      const link = document.createElement("a");
+      link.download = `工坊对话_${new Date().toISOString().slice(0, 19).replace(/[T:]/g, "-")}.png`;
+      link.href = final.toDataURL("image/png");
+      link.click();
+      onNotice?.("截图已保存");
+
+      // 恢复滚动位置
+      body.scrollTop = savedTop;
+    } catch (err) {
+      onNotice?.(`截图失败：${err instanceof Error ? err.message : "未知错误"}`);
+    } finally {
+      setCaptureLoading(false);
+    }
+  }, [captureLoading, onNotice]);
+
   const streamingMsgId =
     snapshot.isGenerating && messages.length > 0 && messages[messages.length - 1].role === "assistant"
       ? messages[messages.length - 1].id
@@ -1069,6 +1137,18 @@ export function PhoneQaApp({ onClose, onNotice }: PhoneQaAppProps) {
           {repoConnected && <span className="qa-header-sub">已连接仓库</span>}
         </div>
         <div className="qa-header-right">
+          {messages.length > 0 && (
+            <button
+              type="button"
+              className="qa-icon-btn"
+              onClick={handleCapture}
+              disabled={captureLoading}
+              aria-label="长截图"
+              title="截图当前对话（自动滚动拼接完整图片）"
+            >
+              {captureLoading ? <Loader2 size={17} strokeWidth={1.75} className="qa-spin" /> : <Camera size={17} strokeWidth={1.75} />}
+            </button>
+          )}
           <button
             type="button"
             className="qa-icon-btn"
