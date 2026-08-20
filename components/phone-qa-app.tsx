@@ -884,9 +884,8 @@ export function PhoneQaApp({ onClose, onNotice }: PhoneQaAppProps) {
   }, [onNotice]);
 
   // 粘贴图片：clipboardData 拿图片文件直接走 handlePickImages；只贴文本时不做拦截
-  // 入口仅在 API 启用了识图时出现，与「+」号按钮同条件
+  // 不限识图开关——截图粘贴是独立能力，图片是否能被 AI 理解取决于 API 配置
   const handleComposerPaste = useCallback((e: ReactClipboardEvent<HTMLTextAreaElement>) => {
-    if (!visionEnabled) return;
     const items = e.clipboardData?.items;
     if (!items || items.length === 0) return;
     const imageFiles: File[] = [];
