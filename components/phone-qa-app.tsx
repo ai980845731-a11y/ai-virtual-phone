@@ -20,6 +20,7 @@ import {
   clearQaToolHistory,
   createQaSession,
   deleteQaSession,
+  editAndRegenerateFromUserMessage,
   getQaActiveContextChars,
   getQaChatSnapshot,
   getQaContextBudgetChars,
@@ -921,9 +922,17 @@ export function PhoneQaApp({ onClose, onNotice }: PhoneQaAppProps) {
 
   const handleSaveEdit = useCallback(() => {
     if (!editingMsg || !snapshot.activeSessionId) return;
-    updateQaMessageContent(snapshot.activeSessionId, editingMsg.id, editText);
-    setEditingMsg(null);
-    onNotice?.("已保存消息内容");
+    if (editingMsg.role === "user") {
+      // 编辑用户消息：删除后续消息 + 用新内容重新生成
+      setEditingMsg(null);
+      onNotice?.("已编辑，正在重新生成…");
+      void editAndRegenerateFromUserMessage(snapshot.activeSessionId, editingMsg.id, editText);
+    } else {
+      // 编辑助手消息：仅保存内容，不触发重新生成
+      updateQaMessageContent(snapshot.activeSessionId, editingMsg.id, editText);
+      setEditingMsg(null);
+      onNotice?.("已保存消息内容");
+    }
   }, [editingMsg, editText, snapshot.activeSessionId, onNotice]);
 
   const streamingMsgId =

@@ -369,6 +369,44 @@ export function updateQaMessageContent(sessionId: string, msgId: string, content
     publish();
 }
 
+/** 编辑用户消息后重新生成：删除该消息之后的所有消息和相关上下文，触发新一轮生成。 */
+export async function editAndRegenerateFromUserMessage(sessionId: string, editedMsgId: string, newContent: string): Promise<void> {
+    if (isGenerating) return;
+
+    const session = sessions.find((s) => s.id === sessionId);
+    if (!session) return;
+
+    const editedIdx = session.messages.findIndex((m) => m.id === editedMsgId);
+    if (editedIdx < 0) return;
+
+    const editedMsg = session.messages[editedIdx];
+    if (editedMsg.role !== "user") return;
+
+    // 要删除的消息 ID 集合（编辑消息之后的所有消息）
+    const removedMsgIds = new Set(session.messages.slice(editedIdx + 1).map((m) => m.id));
+
+    // 更新消息列表：保留编辑消息及之前的消息，更新编辑消息内容
+    const updatedMessages = session.messages.slice(0, editedIdx + 1).map((m) =>
+        m.id === editedMsgId ? { ...m, content: newContent, segments: undefined } : m,
+    );
+
+    // 更新上下文：移除与被删消息相关的条目
+    const updatedContext = sessionContext(session).filter((entry) => {
+        if (entry.turn && removedMsgIds.has(entry.turn)) return false;
+        return true;
+    });
+
+    updateSession(sessionId, (s) => ({
+        ...s,
+        messages: updatedMessages,
+        context: updatedContext,
+        updatedAt: Date.now(),
+    }));
+
+    // 触发新一轮生成（silentUser：不重复添加用户气泡）
+    await sendQaMessage(newContent, undefined, { silentUser: true });
+}
+
 function updateSession(sessionId: string, updater: (session: QaSession) => QaSession, options?: { persist?: boolean }) {
     sessions = sessions
         .map((s) => (s.id === sessionId ? updater(s) : s))
