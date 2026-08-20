@@ -358,6 +358,13 @@ export function deleteQaSession(sessionId: string) {
     publish();
 }
 
+export function renameQaSession(sessionId: string, newTitle: string): void {
+    const trimmed = newTitle.trim();
+    if (!trimmed) return;
+    sessions = sessions.map((s) => (s.id === sessionId ? { ...s, title: trimmed } : s));
+    publish();
+}
+
 /** 编辑一条已发送消息的内容（小坊助手界面"编辑"）。
  *  只覆盖 content 并清掉时序分段缓存（保证渲染用新内容），工具行/提交卡等历史保留。 */
 export function updateQaMessageContent(sessionId: string, msgId: string, content: string): void {

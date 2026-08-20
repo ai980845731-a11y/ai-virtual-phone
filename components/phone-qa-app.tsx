@@ -29,6 +29,7 @@ import {
   QA_CONTEXT_BUDGET_MAX,
   QA_CONTEXT_BUDGET_MIN,
   QA_DEFAULT_CONTEXT_BUDGET_CHARS,
+  renameQaSession,
   setQaContextBudgetChars,
   retryQaMessage,
   revertQaAppliedCommit,
@@ -419,6 +420,7 @@ function QaSessionDrawer({
   activeId,
   onSelect,
   onDelete,
+  onRename,
   onCreate,
   onOpenSettings,
 }: {
@@ -426,9 +428,25 @@ function QaSessionDrawer({
   activeId: string | null;
   onSelect: (id: string) => void;
   onDelete: (id: string) => void;
+  onRename: (id: string, newTitle: string) => void;
   onCreate: () => void;
   onOpenSettings: () => void;
 }) {
+  const [renamingId, setRenamingId] = useState<string | null>(null);
+  const [renameText, setRenameText] = useState("");
+  const renameInputRef = useRef<HTMLInputElement | null>(null);
+
+  const startRename = (session: QaSession) => {
+    setRenamingId(session.id);
+    setRenameText(session.title);
+    requestAnimationFrame(() => renameInputRef.current?.focus());
+  };
+
+  const commitRename = () => {
+    if (renamingId && renameText.trim()) onRename(renamingId, renameText);
+    setRenamingId(null);
+  };
+
   return (
     <aside className="qa-drawer">
       <div className="qa-drawer-head">
@@ -440,23 +458,47 @@ function QaSessionDrawer({
           <div
             key={session.id}
             className={`qa-drawer-item ${session.id === activeId ? "is-active" : ""}`}
-            onClick={() => onSelect(session.id)}
+            onClick={() => { if (renamingId !== session.id) onSelect(session.id); }}
           >
-            <div className="qa-drawer-item-main">
-              <span className="qa-drawer-item-title">{session.title}</span>
-              <span className="qa-drawer-item-time">{formatRelativeTime(session.updatedAt)}</span>
-            </div>
-            <button
-              type="button"
-              className="qa-icon-btn qa-drawer-item-delete"
-              aria-label="删除对话"
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(session.id);
-              }}
-            >
-              <Trash2 size={14} />
-            </button>
+            {renamingId === session.id ? (
+              <div className="qa-drawer-item-rename" onClick={(e) => e.stopPropagation()}>
+                <input
+                  ref={renameInputRef}
+                  className="qa-drawer-rename-input"
+                  value={renameText}
+                  onChange={(e) => setRenameText(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") commitRename(); if (e.key === "Escape") setRenamingId(null); }}
+                  onBlur={commitRename}
+                  maxLength={40}
+                />
+              </div>
+            ) : (
+              <>
+                <div className="qa-drawer-item-main">
+                  <span className="qa-drawer-item-title">{session.title}</span>
+                  <span className="qa-drawer-item-time">{formatRelativeTime(session.updatedAt)}</span>
+                </div>
+                <button
+                  type="button"
+                  className="qa-icon-btn qa-drawer-item-rename-btn"
+                  aria-label="重命名对话"
+                  onClick={(e) => { e.stopPropagation(); startRename(session); }}
+                >
+                  <Pencil size={13} />
+                </button>
+                <button
+                  type="button"
+                  className="qa-icon-btn qa-drawer-item-delete"
+                  aria-label="删除对话"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(session.id);
+                  }}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </>
+            )}
           </div>
         ))}
       </div>
@@ -950,6 +992,7 @@ export function PhoneQaApp({ onClose, onNotice }: PhoneQaAppProps) {
           setDrawerOpen(false);
         }}
         onDelete={deleteQaSession}
+        onRename={renameQaSession}
         onCreate={() => {
           createQaSession();
           setDrawerOpen(false);

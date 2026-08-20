@@ -1431,6 +1431,41 @@
   opacity: 1;
   filter: none;
 }
+/* 列表内重命名键 */
+.qa-drawer-item-rename-btn {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  color: var(--qa-text-tertiary);
+  opacity: 0.55;
+}
+.qa-drawer-item-rename-btn:hover {
+  color: var(--qa-accent);
+  opacity: 1;
+  filter: none;
+}
+/* 重命名内联输入框 */
+.qa-drawer-item-rename {
+  flex: 1;
+  min-width: 0;
+  padding: 2px 0;
+}
+.qa-drawer-rename-input {
+  width: 100%;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1.5px solid var(--qa-accent);
+  background: var(--qa-bg-surface);
+  color: var(--qa-text-primary);
+  font-size: 14px;
+  outline: none;
+  box-sizing: border-box;
+}
 /* 底部创建新会话按钮 */
 .qa-drawer-foot {
   flex-shrink: 0;
