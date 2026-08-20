@@ -58,6 +58,8 @@ import {
   QA_MAX_OUTPUT_TOKENS_MAX,
 } from "@/lib/qa-prefs";
 import { resolveQaApiConfig } from "@/lib/qa-agent-engine";
+import { shouldSendChatInputOnEnter } from "@/lib/chat-input-keyboard";
+import { CHAT_APP_SETTINGS_UPDATED_EVENT, loadChatAppSettings } from "@/lib/chat-storage";
 import {
   loadQaGithubConfig,
   saveQaGithubConfig,
@@ -743,6 +745,8 @@ export function PhoneQaApp({ onClose, onNotice }: PhoneQaAppProps) {
   const [modelName, setModelName] = useState("");
   const [repoWritable, setRepoWritable] = useState(false);
   const [writeMode, setWriteMode] = useState<"confirm" | "auto">("confirm");
+  // Enter 发送：跟随聊天 App 的同一开关，设置变动实时同步
+  const [enterToSendEnabled, setEnterToSendEnabled] = useState(() => loadChatAppSettings().enterToSendEnabled === true);
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const stickToBottomRef = useRef(true);
@@ -761,6 +765,12 @@ export function PhoneQaApp({ onClose, onNotice }: PhoneQaAppProps) {
     void hydrateQaChat();
     refreshComposerMeta();
   }, [refreshComposerMeta]);
+
+  useEffect(() => {
+    const syncEnterToSend = () => setEnterToSendEnabled(loadChatAppSettings().enterToSendEnabled === true);
+    window.addEventListener(CHAT_APP_SETTINGS_UPDATED_EVENT, syncEnterToSend);
+    return () => window.removeEventListener(CHAT_APP_SETTINGS_UPDATED_EVENT, syncEnterToSend);
+  }, []);
 
   // 清理原生 tool 调用历史（防报错）：与小卷同款——移除上下文里的工具记录与原生元数据
   const handleClearToolHistory = useCallback(() => {
@@ -1005,6 +1015,13 @@ export function PhoneQaApp({ onClose, onNotice }: PhoneQaAppProps) {
               setInput(e.target.value);
               autoGrow();
             }}
+            onKeyDown={(e) => {
+              if (shouldSendChatInputOnEnter(e, enterToSendEnabled)) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+            enterKeyHint={enterToSendEnabled ? "send" : "enter"}
           />
           <div className="qa-composer-toolbar">
             {visionEnabled && (
