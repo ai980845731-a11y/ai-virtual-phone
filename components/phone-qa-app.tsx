@@ -793,6 +793,60 @@ export function PhoneQaApp({ onClose, onNotice }: PhoneQaAppProps) {
   const bodyRef = useRef<HTMLDivElement | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const stickToBottomRef = useRef(true);
+  const lastMouseYRef = useRef(-1);
+
+  // ── 选中文字拖到输入栏附近时自动滚动 ──
+  // 浏览器原生自动滚动要等光标到达滚动容器底边才触发，
+  // 但输入栏浮在上面盖住了底边，导致用户要拖到输入栏下方才开始滚。
+  // 这里主动检测光标位置，提前开始滚动。
+  useEffect(() => {
+    const body = bodyRef.current;
+    if (!body) return;
+    let dragging = false;
+    let raf = 0;
+    const tick = () => {
+      if (!dragging) return;
+      const sel = window.getSelection();
+      if (!sel || sel.isCollapsed) { dragging = false; return; }
+      if (lastMouseYRef.current < 0) { raf = requestAnimationFrame(tick); return; }
+      const rect = body.getBoundingClientRect();
+      const THRESHOLD = 120; // 光标距容器底边多远开始滚
+      const bottomEdge = rect.bottom;
+      const dist = bottomEdge - lastMouseYRef.current;
+      if (dist < THRESHOLD) {
+        const ratio = 1 - Math.max(0, dist) / THRESHOLD;
+        body.scrollTop += ratio * 14; // 最大速度 ~14px/frame
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    const onMouseMove = (e: MouseEvent) => {
+      lastMouseYRef.current = e.clientY;
+    };
+    const onMouseUp = () => {
+      dragging = false;
+      lastMouseYRef.current = -1;
+      cancelAnimationFrame(raf);
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+    };
+    const onMouseDown = (e: MouseEvent) => {
+      // 只在滚动区内按下时启动
+      if (!body.contains(e.target as Node)) return;
+      dragging = true;
+      lastMouseYRef.current = e.clientY;
+      document.addEventListener("mousemove", onMouseMove, { passive: true });
+      document.addEventListener("mouseup", onMouseUp, { once: true });
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(tick);
+    };
+    body.addEventListener("mousedown", onMouseDown, { passive: true });
+    return () => {
+      body.removeEventListener("mousedown", onMouseDown);
+      document.removeEventListener("mousemove", onMouseMove);
+      document.removeEventListener("mouseup", onMouseUp);
+      cancelAnimationFrame(raf);
+    };
+  }, []);
 
   const refreshComposerMeta = useCallback(() => {
     setApiReady(resolveQaApiConfig() != null);
