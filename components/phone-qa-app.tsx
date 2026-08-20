@@ -875,6 +875,17 @@ export function PhoneQaApp({ onClose, onNotice }: PhoneQaAppProps) {
     refreshComposerMeta();
   }, [refreshComposerMeta]);
 
+  // 切换会话后滚到底部
+  useEffect(() => {
+    if (!snapshot.activeSessionId) return;
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const el = bodyRef.current;
+        if (el) el.scrollTop = el.scrollHeight;
+      });
+    });
+  }, [snapshot.activeSessionId]);
+
   useEffect(() => {
     const syncEnterToSend = () => setEnterToSendEnabled(loadChatAppSettings().enterToSendEnabled === true);
     window.addEventListener(CHAT_APP_SETTINGS_UPDATED_EVENT, syncEnterToSend);
