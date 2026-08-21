@@ -302,7 +302,7 @@ export function CheckPhoneApp({ onClose }: CheckPhoneAppProps) {
     const month = currentDate.getMonth();
     const todayNum = currentDate.getDate();
     
-    const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+    const monthNames = ["一月", "二月", "三月", "四月", "五月", "六月", "七月", "八月", "九月", "十月", "十一月", "十二月"];
     const monthName = monthNames[month];
     
     const firstDay = new Date(year, month, 1).getDay();
@@ -579,22 +579,22 @@ export function CheckPhoneApp({ onClose }: CheckPhoneAppProps) {
           {!isEmbeddedAppOpen && (
             <div className="cp-floating-controls">
               <div className="cp-floating-settings" ref={settingsPanelRef}>
-                <button className="cp-float-back" onClick={handleBack} aria-label="Back to Archive">
+                <button className="cp-float-back" onClick={handleBack} aria-label="返回">
                   <ChevronLeft size={22} strokeWidth={2.5} />
                 </button>
                 <button
                   className={`cp-float-settings ${settingsOpen ? "is-active" : ""}`}
                   onClick={() => setSettingsOpen((open) => !open)}
-                  aria-label="CheckPhone settings"
+                  aria-label="查手机设置"
                   aria-expanded={settingsOpen}
                 >
                   <Languages size={18} strokeWidth={2.25} />
                 </button>
                 {settingsOpen && (
-                  <div className="cp-desktop-settings-popover" role="dialog" aria-label="CheckPhone settings">
+                  <div className="cp-desktop-settings-popover" role="dialog" aria-label="查手机设置">
                     <div className="cp-desktop-settings-head">
-                      <span>Settings</span>
-                      <b>CHECKPHONE</b>
+                      <span>设置</span>
+                      <b>查手机</b>
                     </div>
                     <div className="cp-desktop-settings-row">
                       <div>
@@ -635,13 +635,13 @@ export function CheckPhoneApp({ onClose }: CheckPhoneAppProps) {
               </div>
 
               <div className="cp-floating-actions">
-                <button className="cp-float-refresh" onClick={handleGenerate} aria-label="Refresh Signal" disabled={!!activeState?.loading}>
+                <button className="cp-float-refresh" onClick={handleGenerate} aria-label="刷新信号" disabled={!!activeState?.loading}>
                   <RefreshCw size={18} strokeWidth={2.5} className={activeState?.loading ? "cp-spin" : undefined} />
                 </button>
                 <button
                   className="cp-float-clear"
                   onClick={() => setConfirmClearOpen(true)}
-                  aria-label="Clear current desktop"
+                  aria-label="清空当前桌面"
                   disabled={!!activeState?.loading || !manifest}
                 >
                   <Trash2 size={17} strokeWidth={2.25} />
@@ -669,9 +669,9 @@ export function CheckPhoneApp({ onClose }: CheckPhoneAppProps) {
           {!manifest && !activeState?.loading && !activeState?.error && (
             <div className="cp-screen-empty">
               <div className="cp-empty-circle"></div>
-              <p>No Signal.</p>
+              <p>无信号</p>
               <button className="cp-inline-btn" onClick={handleGenerate}>
-                Activate Simulator
+                启动模拟器
               </button>
             </div>
           )}
@@ -679,7 +679,7 @@ export function CheckPhoneApp({ onClose }: CheckPhoneAppProps) {
           {activeState?.loading && !manifest && (
             <div className="cp-screen-loading">
               <span className="cp-loading-line"></span>
-              <span className="cp-loading-text">BOOTING...</span>
+              <span className="cp-loading-text">启动中…</span>
             </div>
           )}
 
@@ -719,14 +719,14 @@ export function CheckPhoneApp({ onClose }: CheckPhoneAppProps) {
                             <div className="cp-w-music-disc"></div>
                             <div className="cp-w-tone-arm"></div>
                           </div>
-                          <span className="cp-widget-label">Widgets</span>
+                          <span className="cp-widget-label">小组件</span>
                         </div>
                         
                         {/* Core Vitals Widget - 2x2 */}
                         <div className="cp-widget-wrapper cp-widget-wrapper--span2">
                           <div className="cp-widget cp-w-base cp-w-core">
                             <div className="cp-w-core-top">
-                              <span className="cp-w-core-title">Core Vitals</span>
+                              <span className="cp-w-core-title">核心状态</span>
                               <span className="cp-w-core-dot"></span>
                             </div>
                             <div className="cp-w-core-mid">
@@ -734,19 +734,19 @@ export function CheckPhoneApp({ onClose }: CheckPhoneAppProps) {
                                 <div className="cp-w-core-ring-inner"></div>
                               </div>
                               <div className="cp-w-core-stats">
-                                <span>MEM 42%</span>
-                                <span>SYS OK</span>
+                                <span>内存 42%</span>
+                                <span>正常</span>
                               </div>
                             </div>
                           </div>
-                          <span className="cp-widget-label">System</span>
+                          <span className="cp-widget-label">系统</span>
                         </div>
 
                         {/* Resonance Widget - 2x2 */}
                         <div className="cp-widget-wrapper cp-widget-wrapper--span2">
                           <div className="cp-widget cp-w-base cp-w-resonance">
                             <div className="cp-w-res-head">
-                              <span className="cp-w-res-title">Resonance</span>
+                              <span className="cp-w-res-title">共鸣度</span>
                               <span className="cp-w-res-val">98.2%</span>
                             </div>
                             <div className="cp-w-res-graph">
@@ -756,9 +756,9 @@ export function CheckPhoneApp({ onClose }: CheckPhoneAppProps) {
                               <div className="cp-res-bar" style={{height: '90%'}}></div>
                               <div className="cp-res-bar" style={{height: '40%'}}></div>
                             </div>
-                            <div className="cp-w-res-footer">Status: Harmonized</div>
+                            <div className="cp-w-res-footer">状态：协调</div>
                           </div>
-                          <span className="cp-widget-label">AI Status</span>
+                          <span className="cp-widget-label">AI 状态</span>
                         </div>
 
                         {/* Top Apps (slice 0 to 4) */}
@@ -791,21 +791,21 @@ export function CheckPhoneApp({ onClose }: CheckPhoneAppProps) {
                               </div>
                               <div className="cp-up-speed">
                                 <span className="cp-up-num">1.4</span>
-                                <span className="cp-up-unit">GB/s UPLINK</span>
+                                <span className="cp-up-unit">GB/s 上行</span>
                               </div>
                             </div>
                             <div className="cp-w-up-bottom">
                               <div className="cp-up-stat">
-                                <span className="cp-up-lbl">LATENCY</span>
+                                <span className="cp-up-lbl">延迟</span>
                                 <span className="cp-up-val">12ms</span>
                               </div>
                               <div className="cp-up-stat" style={{alignItems: 'flex-end'}}>
-                                <span className="cp-up-lbl">PACKET</span>
+                                <span className="cp-up-lbl">丢包</span>
                                 <span className="cp-up-val">0.0%</span>
                               </div>
                             </div>
                           </div>
-                          <span className="cp-widget-label">Network</span>
+                          <span className="cp-widget-label">网络</span>
                         </div>
                         
                         {/* Top Apps (slice 4 to 8) fill row 1 and 2 to the right of the 2x2 photo widget */}
@@ -836,7 +836,7 @@ export function CheckPhoneApp({ onClose }: CheckPhoneAppProps) {
                             </div>
                             <div className="cp-cal-right">
                               <div className="cp-cal-header-row">
-                                <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+                                <span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span>
                               </div>
                               <div className="cp-cal-grid-month">
                                 {calendarData ? calendarData.gridCells.map(cell => (
@@ -849,7 +849,7 @@ export function CheckPhoneApp({ onClose }: CheckPhoneAppProps) {
                               </div>
                             </div>
                           </div>
-                          <span className="cp-widget-label">iScreen</span>
+                          <span className="cp-widget-label">日历</span>
                         </div>
 
                         {/* Top Apps (slice 8 to 12) -> Game Library, Music, Xiaohongshu, Reading */}
@@ -902,8 +902,8 @@ export function CheckPhoneApp({ onClose }: CheckPhoneAppProps) {
                    <AppGlyph appId={selectedAppId} />
                  </div>
                  <h3>{selectedAppSpec.label}</h3>
-                 <p>Simulation module offline. UI renders will arrive in later phases.</p>
-                 <button className="cp-modal-close" onClick={closeSelectedApp}>DISMISS</button>
+                 <p>模拟模块离线，界面渲染将在后续版本上线。</p>
+                 <button className="cp-modal-close" onClick={closeSelectedApp}>关闭</button>
               </div>
             </div>
           )}
@@ -997,7 +997,7 @@ export function CheckPhoneApp({ onClose }: CheckPhoneAppProps) {
 
   return (
     <PageShell
-      title="Access Control"
+      title="访问控制"
       onBack={handleBack}
       className="cp-page-override cp-roster-page"
       rightAction={
@@ -1016,17 +1016,17 @@ export function CheckPhoneApp({ onClose }: CheckPhoneAppProps) {
           {/* Tactical forensic header console */}
           <div className="cp-terminal-header">
             <div className="cp-terminal-title-bar">
-              <span>SYSTEM: DECRYPTION NODE ACTIVE</span>
+              <span>系统：解密节点已激活</span>
               <span className="cp-terminal-pulse-dot" />
             </div>
             <div className="cp-terminal-subtitle">
-              MOBILE EVIDENCE FORENSIC WORKSTATION
+              移动设备取证工作站
             </div>
           </div>
 
           <div className="cp-roster-grid">
             {characters.length === 0 && (
-               <div className="cp-roster-empty">No target records found.</div>
+               <div className="cp-roster-empty">未找到目标记录</div>
             )}
             {characters.map((character) => {
               const charManifest = manifestsCacheMap[character.id] || null;
@@ -1057,24 +1057,24 @@ export function CheckPhoneApp({ onClose }: CheckPhoneAppProps) {
                   </div>
 
                   <div className="cp-name-badge">
-                    {character.name || "Unknown"}
+                    {character.name || "未知"}
                   </div>
 
                   {/* Decryption status indicator */}
                   <div className={`cp-status-indicator ${isDecrypted ? 'cp-status-indicator--decrypted' : 'cp-status-indicator--encrypted'}`}>
                     <span className="cp-status-dot" />
-                    <span>{isDecrypted ? "DECRYPTED" : "LOCKED"}</span>
+                    <span>{isDecrypted ? "已解密" : "已锁定"}</span>
                   </div>
 
                   {/* Metadata fields */}
                   <div className="cp-card-metadata">
                     <div className="cp-card-meta-row">
-                      <span>SYS-ID:</span>
+                      <span>编号:</span>
                       <span className="cp-card-meta-val">CP-{(character.name && character.name.substring(0, 2)) || character.id.substring(0, 4)}</span>
                     </div>
                     {character.wechatID && (
                       <div className="cp-card-meta-row">
-                        <span>W-ID:</span>
+                        <span>微信号:</span>
                         <span className="cp-card-meta-val">{character.wechatID}</span>
                       </div>
                     )}
@@ -1107,7 +1107,7 @@ export function CheckPhoneApp({ onClose }: CheckPhoneAppProps) {
               <div className="cp-history-head">
                 <div>
                   <div className="cp-history-title-bar">
-                    <span>ACCESS LOG</span>
+                    <span>访问记录</span>
                     <span className="cp-terminal-pulse-dot" />
                   </div>
                   <div className="cp-history-subtitle">查手机记录 · 会注入对应角色的短期记忆</div>
@@ -1123,7 +1123,7 @@ export function CheckPhoneApp({ onClose }: CheckPhoneAppProps) {
               </div>
               <div className="cp-history-body">
                 {historyGroups.length === 0 && (
-                  <div className="cp-history-empty">NO ACCESS RECORDS</div>
+                  <div className="cp-history-empty">暂无记录</div>
                 )}
                 {historyGroups.map((group) => (
                   <div key={group.characterId} className="cp-history-group">
